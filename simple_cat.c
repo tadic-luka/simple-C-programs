@@ -14,7 +14,7 @@ void read_fd(int fd)
 	if(fstat(fd, &fd_stat) == -1) {
 		err(1, "fstat");
 	}
-	if(!buf && (buf = malloc(sizeof(fd_stat.st_blksize))) == NULL) {
+	if(!buf && (buf = malloc(fd_stat.st_blksize)) == NULL) {
 		err(1, "malloc");	
 	}
 	int ret;
