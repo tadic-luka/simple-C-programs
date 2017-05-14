@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
 				err(1, "open %s\n", *argv);
 			}
 			read_fd(fd);
+			close(fd);
 		}
 		argv++;
 	}
