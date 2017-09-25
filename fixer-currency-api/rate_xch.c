@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 #include "rate_xch.h"
+#include <yajl/yajl_tree.h>
 
 struct resp {
 	char *ptr;
@@ -23,8 +24,10 @@ void init_resp(struct resp *s)
 size_t write_func(void *ptr, size_t size, size_t nmemb, struct resp *s)
 {
 	size_t new_len = s->len + size*nmemb;
+	void *old = s->ptr;
 	s->ptr = realloc(s->ptr, new_len+1);
 	if (s->ptr == NULL) {
+		free(old);
 		fprintf(stderr, "realloc() failed\n");
 		exit(1);
 	}
@@ -47,6 +50,8 @@ int main(int argc, char *argv[])
 	struct resp p;
 	double val;
 	char *end;
+	yajl_val node;
+
 	if(argc != 4) {
 		print_usage();
 	}
@@ -73,15 +78,23 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Error: %s\n", curl_easy_strerror(res));
 		exit(1);
 	}
-	char *num_ptr = strrchr(p.ptr, ':');
-	if(num_ptr == NULL) {
-		fprintf(stderr, "Error with html\n");
+
+	node = yajl_tree_parse(p.ptr, NULL, 0);
+	yajl_val v = yajl_tree_get(
+			node, 
+			(const char *[]) { 
+								"rates", 
+								argv[2], 
+								NULL
+			}, 
+			yajl_t_number);
+	if(!v) {
+		fprintf(stderr, "Error with response\n");
 		exit(1);
 	}
-	double num = strtod(num_ptr + 1, &end);
 	
-	printf("%.2f %s = %.2f %s\n", val, argv[2], val / num, argv[3]);
-	free(p.ptr);
+	printf("%.2f %s = %.2f %s\n", val, argv[2], val / YAJL_GET_DOUBLE(v), argv[3]);
+	yajl_tree_free(node);
 	curl_easy_cleanup(curl);
 
 	return 0;
